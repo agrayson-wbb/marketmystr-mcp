@@ -3,26 +3,23 @@
  * MarketMySTR MCP Server - Production Entry Point
  *
  * Stateless HTTP server that integrates with GoHighLevel API.
- * Requires GHL_PIT_TOKEN, GHL_LOCATION_ID, and MCP_AUTH_TOKEN env vars.
+ * Requires GHL_PIT_TOKEN and GHL_LOCATION_ID env vars.
  * Listens on PORT (default 3000).
  */
 
 import express, { Request, Response } from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createMcpServer } from "./server.js";
-import { createAuthMiddleware } from "./auth.js";
 
 // Validate required env vars at startup
-function validateEnv(): { pit: string; locationId: string; mcpAuthToken: string; port: number } {
+function validateEnv(): { pit: string; locationId: string; port: number } {
   const pit = process.env.GHL_PIT_TOKEN;
   const locationId = process.env.GHL_LOCATION_ID;
-  const mcpAuthToken = process.env.MCP_AUTH_TOKEN;
   const port = parseInt(process.env.PORT || "3000", 10);
 
   const errors: string[] = [];
   if (!pit) errors.push("GHL_PIT_TOKEN not set");
   if (!locationId) errors.push("GHL_LOCATION_ID not set");
-  if (!mcpAuthToken) errors.push("MCP_AUTH_TOKEN not set");
 
   if (errors.length > 0) {
     console.error("Configuration errors:");
@@ -30,26 +27,24 @@ function validateEnv(): { pit: string; locationId: string; mcpAuthToken: string;
     process.exit(1);
   }
 
-  return { pit: pit as string, locationId: locationId as string, mcpAuthToken: mcpAuthToken as string, port };
+  return { pit: pit as string, locationId: locationId as string, port };
 }
 
 async function main() {
-  const { pit, locationId, mcpAuthToken, port } = validateEnv();
+  const { pit, locationId, port } = validateEnv();
 
   // Create Express app
   const app = express();
   app.use(express.json());
 
-  // Auth middleware for all /mcp requests
-  const authMiddleware = createAuthMiddleware(mcpAuthToken);
-
-  // Health check (no auth required)
+  // Health check
   app.get("/health", (_req: Request, res: Response) => {
     res.json({ status: "ok", service: "marketmystr-mcp-server" });
   });
 
   // MCP handler with stateless transport
-  app.post("/mcp", authMiddleware, async (req: Request, res: Response) => {
+  // NOTE: No auth — the Render URL itself is the shared secret. Do not expose publicly.
+  app.post("/mcp", async (req: Request, res: Response) => {
     try {
       // Create new transport for each request (stateless)
       const transport = new StreamableHTTPServerTransport({
