@@ -32,6 +32,7 @@ export function registerFormTools(server: McpServer, client: GHLClient) {
     async (params) => {
       try {
         const queryParams: Record<string, any> = {
+          locationId: client.locationId,
           page: params.page,
           limit: params.limit
         };
@@ -47,7 +48,7 @@ export function registerFormTools(server: McpServer, client: GHLClient) {
         );
 
         const submissions = result.submissions || result.data || [];
-        const total = result.total || submissions.length;
+        const total = result.total || result.meta?.total || submissions.length;
 
         const output = {
           total,
@@ -68,8 +69,8 @@ export function registerFormTools(server: McpServer, client: GHLClient) {
         text += `Found ${total} total submissions (showing ${submissions.length})\n\n`;
 
         for (const s of submissions) {
-          const date = new Date(s.createdAt).toLocaleDateString();
-          text += `## ${s.email} - ${date} (${s.id})\n`;
+          const date = s.createdAt ? new Date(s.createdAt).toLocaleDateString() : "unknown";
+          text += `## ${s.email || "(no email)"} - ${date} (${s.id})\n`;
           if (s.formId) text += `- Form: ${s.formId}\n`;
           if (s.contactId) text += `- Contact: ${s.contactId}\n`;
           text += "\n";

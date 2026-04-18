@@ -9,8 +9,7 @@ import { GHLClient } from "../ghl-client.js";
 const SearchContactsInputSchema = z
   .object({
     query: z.string().describe("Search string (name, email, phone)"),
-    limit: z.number().int().min(1).max(100).default(20).describe("Results per page"),
-    offset: z.number().int().min(0).default(0).describe("Pagination offset")
+    limit: z.number().int().min(1).max(100).default(20).describe("Results per page")
   })
   .strict();
 
@@ -67,7 +66,7 @@ export function registerContactTools(server: McpServer, client: GHLClient) {
     "marketmystr_search_contacts",
     {
       title: "Search Contacts",
-      description: "Search for contacts by name, email, or phone. Supports pagination.",
+      description: "Search for contacts by name, email, or phone.",
       inputSchema: SearchContactsInputSchema,
       annotations: {
         readOnlyHint: true,
@@ -78,16 +77,19 @@ export function registerContactTools(server: McpServer, client: GHLClient) {
     },
     async (params) => {
       try {
-        const body = { q: params.query, limit: params.limit, skip: params.offset };
+        const body = {
+          locationId: client.locationId,
+          query: params.query,
+          pageLimit: params.limit
+        };
         const result = await client.request<any>("/contacts/search", "POST", body);
 
         const contacts = result.contacts || [];
-        const total = result.total || 0;
+        const total = result.total || contacts.length;
 
         const output = {
           total,
           count: contacts.length,
-          offset: params.offset,
           contacts: contacts.map((c: any) => ({
             id: c.id,
             firstName: c.firstName,
@@ -95,9 +97,7 @@ export function registerContactTools(server: McpServer, client: GHLClient) {
             email: c.email,
             phone: c.phone,
             tags: c.tags || []
-          })),
-          has_more: total > params.offset + contacts.length,
-          next_offset: params.offset + contacts.length
+          }))
         };
 
         let text = `# Contact Search: "${params.query}"\n\nFound ${total} contacts (showing ${contacts.length})\n\n`;
@@ -138,7 +138,8 @@ export function registerContactTools(server: McpServer, client: GHLClient) {
     },
     async (params) => {
       try {
-        const contact = await client.request<any>(`/contacts/${params.contactId}`, "GET");
+        const result = await client.request<any>(`/contacts/${params.contactId}`, "GET");
+        const contact = result.contact || result;
 
         const output = {
           id: contact.id,
@@ -176,7 +177,7 @@ export function registerContactTools(server: McpServer, client: GHLClient) {
     {
       title: "Create Contact",
       description:
-        "Create a new contact. Not idempotent—will create duplicates if called multiple times with same data.",
+        "Create a new contact. Not idempotent — will create duplicates if called multiple times with same data.",
       inputSchema: CreateContactInputSchema,
       annotations: {
         readOnlyHint: false,
@@ -188,6 +189,7 @@ export function registerContactTools(server: McpServer, client: GHLClient) {
     async (params) => {
       try {
         const body: any = {
+          locationId: client.locationId,
           firstName: params.firstName
         };
         if (params.lastName) body.lastName = params.lastName;
@@ -197,7 +199,8 @@ export function registerContactTools(server: McpServer, client: GHLClient) {
         if (params.customFields) body.customFields = params.customFields;
         if (params.source) body.source = params.source;
 
-        const contact = await client.request<any>("/contacts", "POST", body);
+        const result = await client.request<any>("/contacts/", "POST", body);
+        const contact = result.contact || result;
 
         const output = {
           id: contact.id,
@@ -241,6 +244,7 @@ export function registerContactTools(server: McpServer, client: GHLClient) {
     async (params) => {
       try {
         const body: any = {
+          locationId: client.locationId,
           firstName: params.firstName
         };
         if (params.lastName) body.lastName = params.lastName;
@@ -250,13 +254,15 @@ export function registerContactTools(server: McpServer, client: GHLClient) {
         if (params.customFields) body.customFields = params.customFields;
         if (params.source) body.source = params.source;
 
-        const contact = await client.request<any>("/contacts/upsert", "POST", body);
+        const result = await client.request<any>("/contacts/upsert", "POST", body);
+        const contact = result.contact || result;
+        const isNew = result.new === true;
 
         const output = {
           id: contact.id,
           firstName: contact.firstName,
           email: contact.email,
-          action: contact._isCreate ? "created" : "updated"
+          action: isNew ? "created" : "updated"
         };
 
         return {
@@ -300,11 +306,12 @@ export function registerContactTools(server: McpServer, client: GHLClient) {
         if (params.phone) body.phone = params.phone;
         if (params.customFields) body.customFields = params.customFields;
 
-        const contact = await client.request<any>(
+        const result = await client.request<any>(
           `/contacts/${params.contactId}`,
           "PUT",
           body
         );
+        const contact = result.contact || result;
 
         return {
           content: [

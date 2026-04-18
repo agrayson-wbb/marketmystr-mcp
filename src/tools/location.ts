@@ -23,10 +23,15 @@ export function registerLocationTools(server: McpServer, client: GHLClient) {
     },
     async () => {
       try {
-        const location = await client.request<any>("/locations", "GET");
+        const result = await client.request<any>(
+          `/locations/${client.locationId}`,
+          "GET"
+        );
+
+        const location = result.location || result;
 
         const output = {
-          id: location.id || "unknown",
+          id: location.id || client.locationId,
           name: location.name || "unknown",
           email: location.email,
           phone: location.phone,

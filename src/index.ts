@@ -3,7 +3,7 @@
  * MarketMySTR MCP Server - Production Entry Point
  *
  * Stateless HTTP server that integrates with GoHighLevel API.
- * Requires GHL_PIT_TOKEN and GHL_LOCATION_ID env vars.
+ * Requires GHL_PIT_TOKEN, GHL_LOCATION_ID, and MCP_AUTH_TOKEN env vars.
  * Listens on PORT (default 3000).
  */
 

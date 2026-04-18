@@ -32,7 +32,9 @@ export function registerWorkflowTools(server: McpServer, client: GHLClient) {
     },
     async () => {
       try {
-        const result = await client.request<any>("/workflows", "GET");
+        const result = await client.request<any>("/workflows/", "GET", undefined, {
+          locationId: client.locationId
+        });
 
         const workflows = result.workflows || result.data || [];
 

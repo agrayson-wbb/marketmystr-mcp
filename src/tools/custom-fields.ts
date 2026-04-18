@@ -25,7 +25,10 @@ export function registerCustomFieldTools(server: McpServer, client: GHLClient) {
     },
     async () => {
       try {
-        const result = await client.request<any>("/locations/customFields", "GET");
+        const result = await client.request<any>(
+          `/locations/${client.locationId}/customFields`,
+          "GET"
+        );
 
         const fields = result.customFields || result.data || [];
 

@@ -13,7 +13,7 @@ export interface GHLClientOptions {
 
 export class GHLClient {
   private pit: string;
-  private locationId: string;
+  public locationId: string;
 
   constructor(options: GHLClientOptions) {
     this.pit = options.pit;
@@ -24,20 +24,18 @@ export class GHLClient {
     endpoint: string,
     method: "GET" | "POST" | "PUT" | "DELETE" = "GET",
     body?: unknown,
-    queryParams?: Record<string, string | number | boolean>
+    queryParams?: Record<string, string | number | boolean | undefined>
   ): Promise<T> {
     const url = new URL(`${GHL_BASE_URL}${endpoint}`);
 
-    // Add locationId to query params for most endpoints
-    if (!queryParams) queryParams = {};
-    if (!queryParams.locationId && this.locationId) {
-      queryParams.locationId = this.locationId;
+    // Add caller-provided query params only (no auto-append of locationId)
+    if (queryParams) {
+      Object.entries(queryParams).forEach(([key, value]) => {
+        if (value !== undefined) {
+          url.searchParams.append(key, String(value));
+        }
+      });
     }
-
-    // Add all query params
-    Object.entries(queryParams).forEach(([key, value]) => {
-      url.searchParams.append(key, String(value));
-    });
 
     const headers: Record<string, string> = {
       Authorization: `Bearer ${this.pit}`,
