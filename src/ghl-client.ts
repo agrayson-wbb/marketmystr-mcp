@@ -39,7 +39,7 @@ export class GHLClient {
       url.searchParams.append(key, String(value));
     });
 
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       Authorization: `Bearer ${this.pit}`,
       Version: GHL_API_VERSION,
       Accept: "application/json",
