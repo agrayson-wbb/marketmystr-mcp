@@ -30,7 +30,7 @@ function validateEnv(): { pit: string; locationId: string; mcpAuthToken: string;
     process.exit(1);
   }
 
-  return { pit, locationId, mcpAuthToken, port };
+  return { pit: pit as string, locationId: locationId as string, mcpAuthToken: mcpAuthToken as string, port };
 }
 
 async function main() {
